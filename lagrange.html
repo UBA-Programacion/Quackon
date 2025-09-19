@@ -406,7 +406,7 @@
               class="space-y-2 font-mono text-sm overflow-y-auto max-h-64"
             >
               <p class="text-gray-500">
-                Esperando para iniciar la simulación...
+                Esperando para iniciar la siejecución...
               </p>
             </div>
             <div
@@ -826,12 +826,12 @@
             !loanProvider ||
             swapZones.some((zone) => !zone.querySelector(".dropped-cube"))
           ) {
-            logMessage("Faltan bloques en tu combo para simular.", "error");
+            logMessage("Faltan bloques en tu combo para Ejecutar.", "error");
             return;
           }
 
           simulateBtn.disabled = true;
-          simulateBtn.textContent = "SIMULANDO...";
+          simulateBtn.textContent = "EJECUTANDO...";
 
           const initialLoanAmount = parseFloat(
             document.getElementById("loanAmount").value
@@ -841,7 +841,7 @@
           const loanFeePercentage = 0.0009;
 
           logMessage(
-            `Iniciando simulación en ${network.toUpperCase()}...`,
+            `Iniciando ejecución en ${network.toUpperCase()}...`,
             "title"
           );
           await sleep(500);
@@ -866,7 +866,7 @@
                 "error"
               );
               simulateBtn.disabled = false;
-              simulateBtn.textContent = "Simular Transacción";
+              simulateBtn.textContent = "Ejecutar Transacción";
               return;
             }
 
@@ -884,7 +884,7 @@
                 "error"
               );
               simulateBtn.disabled = false;
-              simulateBtn.textContent = "Simular Transacción";
+              simulateBtn.textContent = "Ejecutar Transacción";
               return;
             }
 
@@ -908,11 +908,11 @@
           const finalAmount = balances[initialLoanAsset];
           if (finalAmount === undefined) {
             logMessage(
-              `Error: La simulación no terminó con la moneda del préstamo (${initialLoanAsset}).`,
+              `Error: La ejecución no terminó con la moneda del préstamo (${initialLoanAsset}).`,
               "error"
             );
             simulateBtn.disabled = false;
-            simulateBtn.textContent = "Simular Transacción";
+            simulateBtn.textContent = "Ejecutar Transacción";
             return;
           }
 
@@ -954,11 +954,12 @@
           }
 
           simulateBtn.disabled = false;
-          simulateBtn.textContent = "Simular Transacción";
+          simulateBtn.textContent = "Ejecutar Transacción";
         });
       });
     </script>
   </body>
 </html>
+
 
 
