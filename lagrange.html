@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quantum Arbitrage - Simulador DeFi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #2a0000; /* Cambiado a granate oscuro */
+        color: #e2e8f0;
+        scroll-behavior: smooth;
+      }
+      .font-orbitron {
+        font-family: "Orbitron", sans-serif;
+      }
+      .text-glow {
+        text-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+      } /* Rojo Neón */
+      .nav-bar {
+        background-color: #161b22;
+        box-shadow: 0 4px 15px rgba(220, 38, 38, 0.15); /* Sombra Roja */
+        position: -webkit-sticky; /* Para Safari */
+        position: sticky; /* Se pega al scrollear */
+        top: 0;
+        z-index: 50;
+      }
+      .nav-link {
+        font-family: "Orbitron", sans-serif;
+        letter-spacing: 0.05em;
+        color: #94a3b8;
+        transition: color 0.3s;
+      }
+      .nav-link:hover {
+        color: #ef4444;
+      } /* Rojo Neón */
+
+      /* Estilos del Simulador */
+      .combo-cube {
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        box-shadow: 0 4px 15px rgba(220, 38, 38, 0.05);
+        transition: all 0.2s ease-out;
+        cursor: grab;
+      }
+      .combo-cube:hover {
+        transform: translateY(-4px) scale(1.05);
+        border-color: #ef4444; /* Rojo Neón */
+        box-shadow: 0 8px 25px rgba(220, 38, 38, 0.15);
+      }
+      .combo-cube:active {
+        cursor: grabbing;
+      }
+
+      .drop-zone {
+        background-color: rgba(22, 27, 34, 0.5);
+        border: 2px dashed #30363d;
+        transition: all 0.2s ease-out;
+        position: relative;
+      }
+      .drop-zone.active {
+        border-color: #ef4444; /* Rojo Neón */
+        background-color: rgba(220, 38, 38, 0.1);
+      }
+
+      .workflow-connector {
+        position: absolute;
+        bottom: -28px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 2px;
+        height: 20px;
+        background-color: #30363d;
+      }
+      .workflow-connector::after {
+        content: "";
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 6px solid #30363d;
+      }
+
+      .pair-selectors {
+        width: 100%;
+      }
+
+      .log-entry {
+        animation: fadeIn 0.5s ease-out;
+      }
+      .log-entry.success {
+        color: #2dd4bf;
+      }
+      .log-entry.error {
+        color: #f87171;
+      }
+      .log-entry.info {
+        color: #94a3b8;
+      }
+      .log-entry.title {
+        color: #ef4444;
+      } /* Rojo Neón */
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .final-profit.positive {
+        color: #2dd4bf;
+        text-shadow: 0 0 15px #2dd4bf;
+      }
+      .final-profit.negative {
+        color: #f87171;
+        text-shadow: 0 0 15px #f87171;
+      }
+
+      .custom-input,
+      .custom-select {
+        background-color: #2a0000; /* Cambiado a granate oscuro */
+        border: 1px solid #30363d;
+        border-radius: 0.375rem;
+        padding: 0.5rem 0.75rem;
+        transition: all 0.2s;
+      }
+      .custom-input:focus,
+      .custom-select:focus {
+        outline: none;
+        border-color: #ef4444; /* Rojo Neón */
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+      }
+
+      /* Estilos para Precios en Vivo */
+      .price-list-item {
+        transition: background-color 0.3s;
+      }
+      .price-up {
+        color: #2dd4bf;
+      }
+      .price-down {
+        color: #f87171;
+      }
+      .price-neutral {
+        color: #94a3b8;
+      }
+
+      /* Estilo de Botón Neón */
+      .btn-neon {
+        transition: all 0.3s ease;
+        border: 2px solid #ef4444;
+        color: #ef4444;
+        text-shadow: 0 0 5px rgba(239, 68, 68, 0.7);
+        box-shadow: 0 0 5px rgba(239, 68, 68, 0.5),
+          inset 0 0 5px rgba(239, 68, 68, 0.5);
+        background-color: transparent;
+      }
+      .btn-neon:hover {
+        background-color: #ef4444;
+        color: #161b22;
+        box-shadow: 0 0 15px #ef4444, 0 0 30px #ef4444, 0 0 60px #ef4444;
+        text-shadow: none;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-900 text-gray-200">
+    <!-- Espacio inicial para que la barra de navegación empiece más abajo -->
+    <div class="h-8"></div>
+
+    <!-- Barra de Navegación -->
+    <nav class="nav-bar">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center">
+            <a
+              href="#"
+              class="flex-shrink-0 text-white font-bold text-xl nav-link"
+            >
+              QUANTUN ARBITRAGE
+            </a>
+          </div>
+          <div class="hidden md:block">
+            <div class="ml-10 flex items-baseline space-x-4">
+              <a href="#intro" class="nav-link px-3 py-2 rounded-md font-medium"
+                >Inicio</a
+              >
+              <a
+                href="aestrella.html"
+                class="nav-link px-3 py-2 rounded-md font-medium"
+                >A*</a
+              >
+              <a
+                href="markov.html"
+                class="nav-link px-3 py-2 rounded-md font-medium"
+                >Markov</a
+              >
+              <a
+                href="lagrange.html"
+                class="nav-link px-3 py-2 rounded-md font-medium"
+                >Lagrange</a
+              >
+              <a
+                href="#contact"
+                class="nav-link px-3 py-2 rounded-md font-medium"
+                >Contacto</a
+              >
+            </div>
+          </div>
+          <div class="-mr-2 flex md:hidden">
+            <button
+              type="button"
+              class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+              aria-controls="mobile-menu"
+              aria-expanded="false"
+              id="mobile-menu-btn"
+            >
+              <svg
+                class="block h-6 w-6"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="md:hidden hidden" id="mobile-menu">
+        <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+          <a
+            href="#intro"
+            class="nav-link block px-3 py-2 rounded-md font-medium"
+            >Inicio</a
+          >
+          <a
+            href="aestrella.html"
+            class="nav-link block px-3 py-2 rounded-md font-medium"
+            >A*</a
+          >
+          <a
+            href="markov.html"
+            class="nav-link block px-3 py-2 rounded-md font-medium"
+            >MarcoV</a
+          >
+          <a
+            href="lagrange.html"
+            class="nav-link block px-3 py-2 rounded-md font-medium"
+            >Lagrange</a
+          >
+          <a
+            href="#contact"
+            class="nav-link block px-3 py-2 rounded-md font-medium"
+            >Contacto</a
+          >
+        </div>
+      </div>
+    </nav>
+
+    <!-- Encabezado Inicial -->
+    <header class="text-center py-8">
+      <h1
+        class="text-4xl md:text-5xl font-bold text-red-500 font-orbitron text-glow uppercase tracking-wider"
+      >
+        MODELO LAGRANGE
+      </h1>
+      <p class="mt-3 text-lg text-gray-400">
+        Armá tu estrategia con precios de mercado Crypto en tiempo real.
+      </p>
+    </header>
+
+    <!-- Contenido Principal del Simulador -->
+    <main class="container mx-auto p-4 md:p-8">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Columna de Bloques y Precios -->
+        <div class="lg:col-span-1 space-y-8">
+          <div>
+            <h2 class="text-2xl font-bold font-orbitron text-red-500 mb-4">
+              Red
+            </h2>
+            <select id="network" class="w-full custom-select">
+              <option value="ethereum">Ethereum</option>
+              <option value="polygon">Polygon</option>
+              <option value="bsc">BNB Chain</option>
+            </select>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold font-orbitron text-red-500 mb-4">
+              1. Pedir Préstamo
+            </h2>
+            <div id="loan-providers" class="grid grid-cols-2 gap-4"></div>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold font-orbitron text-red-500 mb-4">
+              2. Intercambiar (Swap)
+            </h2>
+            <div id="exchanges" class="grid grid-cols-2 gap-4"></div>
+          </div>
+          <!-- Panel de Precios en Vivo -->
+          <div>
+            <h2 class="text-2xl font-bold font-orbitron text-red-500 mb-4">
+              Precios en Vivo (Reales)
+            </h2>
+            <div
+              id="live-prices"
+              class="bg-[#161b22] p-4 rounded-xl border border-[#30363d] space-y-2 min-h-[150px]"
+            >
+              <!-- Los precios se generan con JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna de Workflow y Resultados -->
+        <div class="lg:col-span-2 space-y-8">
+          <!-- Zona de Construcción (Workflow) -->
+          <div class="bg-[#161b22] p-6 rounded-xl border border-[#30363d]">
+            <h2
+              class="text-2xl font-bold font-orbitron text-red-500 mb-6 text-center"
+            >
+              Tu Combo de Arbitraje
+            </h2>
+            <div id="workflow-container" class="space-y-8">
+              <!-- Drop zones generadas por JS -->
+            </div>
+          </div>
+
+          <!-- Controles y Simulación -->
+          <div class="bg-[#161b22] p-6 rounded-xl border border-[#30363d]">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label
+                  for="loanAmount"
+                  class="block text-sm font-medium text-gray-400 mb-2"
+                  >Monto del Préstamo</label
+                >
+                <div class="flex gap-2">
+                  <input
+                    type="number"
+                    id="loanAmount"
+                    value="100000"
+                    class="w-2/3 custom-input"
+                  />
+                  <select id="loanAsset" class="w-1/3 custom-select"></select>
+                </div>
+              </div>
+              <div>
+                <label
+                  for="swap-count-slider"
+                  class="block text-sm font-medium text-gray-400 mb-2"
+                  >Número de Intercambios:
+                  <span id="swap-count-label" class="font-bold text-red-500"
+                    >2</span
+                  ></label
+                >
+                <input
+                  type="range"
+                  id="swap-count-slider"
+                  min="2"
+                  max="6"
+                  value="2"
+                  step="1"
+                  class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-red-500 mt-4"
+                />
+              </div>
+            </div>
+            <button
+              id="simulateBtn"
+              class="btn-neon w-full font-bold py-3 px-6 rounded-lg font-orbitron uppercase tracking-wider transition-transform"
+            >
+              Ejecutar Transacción
+            </button>
+          </div>
+
+          <!-- Resultados -->
+          <div
+            id="results-container"
+            class="bg-[#161b22] p-6 rounded-xl border border-[#30363d] min-h-[200px]"
+          >
+            <h2 class="text-2xl font-bold font-orbitron text-red-500 mb-4">
+              Log de Ejecución
+            </h2>
+            <div
+              id="output"
+              class="space-y-2 font-mono text-sm overflow-y-auto max-h-64"
+            >
+              <p class="text-gray-500">
+                Esperando para iniciar la simulación...
+              </p>
+            </div>
+            <div
+              id="final-profit"
+              class="text-4xl text-center font-orbitron mt-6"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="bg-gray-900 text-gray-400 py-8 mt-12 w-full">
+      <div
+        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center"
+      >
+        <div class="text-center md:text-left mb-4 md:mb-0">
+          <p>&copy; 4052 Flash Loans Corp. Todos los derechos reservados.</p>
+        </div>
+        <div class="flex space-x-6">
+          <a
+            href="#"
+            class="text-gray-400 hover:text-white transition-colors duration-300"
+          >
+            <svg
+              class="h-6 w-6"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.007-.533A8.349 8.349 0 0022 5.92a8.194 8.194 0 01-2.357.646 4.113 4.113 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.108 4.108 0 00-6.983 3.743 11.636 11.636 0 01-8.457-4.287 4.108 4.108 0 001.275 5.488 4.086 4.086 0 01-1.858-.513c-.045 1.901 1.317 3.65 3.29 4.053-.385.085-.79.117-1.209.117-.295 0-.58-.024-.855-.083a4.114 4.114 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.844"
+              />
+            </svg>
+          </a>
+          <a
+            href="#"
+            class="text-gray-400 hover:text-white transition-colors duration-300"
+          >
+            <svg
+              class="h-6 w-6"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.505 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.987A10 10 0 0022 12z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </a>
+          <a
+            href="#"
+            class="text-gray-400 hover:text-white transition-colors duration-300"
+          >
+            <svg
+              class="h-6 w-6"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.866 8.165 6.84 9.49l-1.427-4.42c-.08-.25-.09-.52.02-.75a1 1 0 011.05-.59c.28.05.57.08.86.08a7 7 0 005.15-2.02l.66-.66a1 1 0 011.41 0l.96.96a1 1 0 010 1.41l-1.41 1.41a1 1 0 01-1.41 0l-2.02-2.02a1 1 0 01-.02-1.42zM12 20a8 8 0 100-16 8 8 0 000 16z"
+              />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const NETWORK_DATA = {
+          ethereum: {
+            loans: [
+              { name: "Aave", icon: "💧" },
+              { name: "Compound", icon: "🟢" },
+            ],
+            exchanges: [
+              { name: "Uniswap", icon: "🦄" },
+              { name: "Sushiswap", icon: "🍣" },
+              { name: "Curve", icon: "🗞️" },
+            ],
+            stablecoins: ["USDT", "USDC", "DAI"],
+            assets: {
+              ETH: "ETHUSDT",
+              WBTC: "BTCUSDT",
+              LINK: "LINKUSDT",
+              UNI: "UNIUSDT",
+            },
+          },
+          polygon: {
+            loans: [
+              { name: "Aave", icon: "💧" },
+              { name: "QuickSwap", icon: "🛡️" },
+            ],
+            exchanges: [
+              { name: "QuickSwap", icon: "💡" },
+              { name: "Sushiswap", icon: "🍣" },
+            ],
+            stablecoins: ["USDT", "USDC", "DAI"],
+            assets: { MATIC: "MATICUSDT", WETH: "ETHUSDT", WBTC: "BTCUSDT" },
+          },
+          bsc: {
+            loans: [
+              { name: "Venus", icon: "🌏" },
+              { name: "PancakeSwap", icon: "🥞" },
+            ],
+            exchanges: [
+              { name: "PancakeSwap", icon: "🥞" },
+              { name: "Biswap", icon: "Biswap" },
+            ],
+            stablecoins: ["BUSD", "USDT", "USDC"],
+            assets: { BNB: "BNBUSDT", CAKE: "CAKEUSDT", ETH: "ETHUSDT" },
+          },
+        };
+
+        const networkSelect = document.getElementById("network");
+        const loanProvidersContainer =
+          document.getElementById("loan-providers");
+        const exchangesContainer = document.getElementById("exchanges");
+        const loanAssetSelect = document.getElementById("loanAsset");
+        const livePricesContainer = document.getElementById("live-prices");
+        const workflowContainer = document.getElementById("workflow-container");
+        const swapCountSlider = document.getElementById("swap-count-slider");
+        const swapCountLabel = document.getElementById("swap-count-label");
+        const simulateBtn = document.getElementById("simulateBtn");
+        const output = document.getElementById("output");
+        const finalProfitDisplay = document.getElementById("final-profit");
+
+        let livePrices = {};
+        let priceUpdateInterval;
+
+        const getApiSymbol = (token, stable) => {
+          if (token === stable) return null; // No price for stable against itself
+          const network = networkSelect.value;
+          const assets = NETWORK_DATA[network].assets;
+          return assets[token] || null;
+        };
+
+        const fetchRealPrice = async (apiSymbol) => {
+          if (!apiSymbol) return null;
+          try {
+            const response = await fetch(
+              `https://api.binance.com/api/v3/ticker/price?symbol=${apiSymbol}`
+            );
+            if (!response.ok) throw new Error("Network response was not ok");
+            const data = await response.json();
+            return parseFloat(data.price);
+          } catch (error) {
+            console.error("Failed to fetch real price:", error);
+            return null;
+          }
+        };
+
+        const createCube = (item, type) => {
+          const cube = document.createElement("div");
+          cube.className = "combo-cube flex items-center gap-3 p-4 rounded-lg";
+          cube.draggable = true;
+          cube.dataset.name = item.name;
+          cube.dataset.type = type;
+          cube.innerHTML = `<span class="text-xl">${item.icon}</span> <span class="font-bold text-sm">${item.name}</span>`;
+
+          cube.addEventListener("dragstart", (e) => {
+            e.dataTransfer.setData(
+              "text/plain",
+              JSON.stringify({ name: item.name, type, icon: item.icon })
+            );
+            setTimeout(() => cube.classList.add("opacity-50"), 0);
+          });
+          cube.addEventListener("dragend", () =>
+            cube.classList.remove("opacity-50")
+          );
+          return cube;
+        };
+
+        const generateWorkflowZones = (count) => {
+          workflowContainer.innerHTML = "";
+          const data = NETWORK_DATA[networkSelect.value];
+          const allAssets = [...data.stablecoins, ...Object.keys(data.assets)];
+
+          const loanZone = document.createElement("div");
+          loanZone.id = "loan-step";
+          loanZone.className =
+            "drop-zone h-24 flex items-center justify-center rounded-lg p-0";
+          loanZone.innerHTML = `<div class="h-full w-full flex items-center justify-center"><span class="placeholder text-gray-500">1. Arrastrá un proveedor de préstamo</span></div><div class="workflow-connector"></div>`;
+          workflowContainer.appendChild(loanZone);
+
+          for (let i = 1; i <= count; i++) {
+            const swapZone = document.createElement("div");
+            swapZone.id = `swap-step-${i}`;
+            swapZone.className =
+              "drop-zone h-24 flex items-center justify-center rounded-lg p-4";
+            swapZone.innerHTML = `
+                    <div class="flex flex-col items-center justify-center text-center h-full w-full">
+                        <div class="flex-grow flex items-center">
+                            <span class="placeholder text-gray-500">${
+                              i + 1
+                            }. Arrastrá un exchange</span>
+                        </div>
+                        <div class="pair-selectors flex items-center justify-center gap-4">
+                            <select class="from-token w-full custom-select text-xs p-1"></select>
+                            <span class="text-red-500 font-bold mx-2">→</span>
+                            <select class="to-token w-full custom-select text-xs p-1"></select>
+                        </div>
+                    </div>
+                `;
+            if (i < count) {
+              swapZone.innerHTML += `<div class="workflow-connector"></div>`;
+            }
+            workflowContainer.appendChild(swapZone);
+
+            const fromSelect = swapZone.querySelector(".from-token");
+            const toSelect = swapZone.querySelector(".to-token");
+
+            allAssets.forEach((asset) => {
+              fromSelect.add(new Option(asset, asset));
+              toSelect.add(new Option(asset, asset));
+            });
+
+            // Chain the selects
+            if (i === 1) {
+              fromSelect.value = loanAssetSelect.value;
+              fromSelect.disabled = true;
+              toSelect.value = allAssets.find(
+                (a) => !data.stablecoins.includes(a)
+              ); // Default to first non-stable
+            } else {
+              const prevToSelect = workflowContainer.querySelector(
+                `#swap-step-${i - 1} .to-token`
+              );
+              fromSelect.value = prevToSelect.value;
+              fromSelect.disabled = true;
+            }
+          }
+          addDragListeners();
+          addSelectListeners();
+        };
+
+        const addSelectListeners = () => {
+          document.querySelectorAll(".to-token").forEach((select, index) => {
+            select.addEventListener("change", (e) => {
+              const nextFromSelect = document.querySelector(
+                `#swap-step-${index + 2} .from-token`
+              );
+              if (nextFromSelect) {
+                nextFromSelect.value = e.target.value;
+              }
+            });
+          });
+          loanAssetSelect.addEventListener("change", (e) => {
+            const firstFromSelect = document.querySelector(
+              `#swap-step-1 .from-token`
+            );
+            if (firstFromSelect) {
+              firstFromSelect.value = e.target.value;
+            }
+          });
+        };
+
+        const addDragListeners = () => {
+          document.querySelectorAll(".drop-zone").forEach((zone) => {
+            zone.addEventListener("dragover", (e) => {
+              e.preventDefault();
+              zone.classList.add("active");
+            });
+
+            zone.addEventListener("dragleave", () => {
+              zone.classList.remove("active");
+            });
+
+            zone.addEventListener("drop", (e) => {
+              e.preventDefault();
+              zone.classList.remove("active");
+              const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+              const zoneId = zone.id;
+
+              // Validate block type
+              if (
+                (zoneId === "loan-step" && data.type !== "loan") ||
+                (zoneId.startsWith("swap-step-") && data.type !== "exchange")
+              ) {
+                logMessage("¡Bloque incorrecto en esta zona!", "error");
+                return;
+              }
+
+              const placeholder = zone.querySelector(".placeholder");
+
+              let droppedCube = zone.querySelector(".dropped-cube");
+              if (!droppedCube) {
+                droppedCube = document.createElement("div");
+                // Find the correct container to append the cube to
+                if (zoneId.startsWith("swap-step-")) {
+                  // Swap zones have a specific container for the placeholder/cube
+                  const cubeContainer = zone.querySelector(".flex-grow");
+                  if (cubeContainer) {
+                    cubeContainer.appendChild(droppedCube);
+                  }
+                } else {
+                  // Loan zone is simpler
+                  const cubeContainer = zone.querySelector(".h-full.w-full");
+                  if (cubeContainer) {
+                    cubeContainer.appendChild(droppedCube);
+                  }
+                }
+              }
+
+              // Set content and styles
+              droppedCube.className =
+                "dropped-cube flex items-center justify-center gap-3 p-4 rounded-lg"; // Add all classes
+              droppedCube.dataset.name = data.name;
+              droppedCube.innerHTML = `<span class="text-2xl">${data.icon}</span> <span class="font-bold">${data.name}</span>`;
+
+              // Now hide the placeholder
+              if (placeholder) {
+                placeholder.style.display = "none";
+              }
+            });
+          });
+        };
+
+        const updateUIForNetwork = (network) => {
+          const data = NETWORK_DATA[network];
+          loanProvidersContainer.innerHTML = "";
+          exchangesContainer.innerHTML = "";
+          loanAssetSelect.innerHTML = "";
+          data.loans.forEach((p) =>
+            loanProvidersContainer.appendChild(createCube(p, "loan"))
+          );
+          data.exchanges.forEach((p) =>
+            exchangesContainer.appendChild(createCube(p, "exchange"))
+          );
+          data.stablecoins.forEach((s) =>
+            loanAssetSelect.add(new Option(s, s))
+          );
+
+          generateWorkflowZones(parseInt(swapCountSlider.value));
+          startPriceUpdates();
+        };
+
+        const updateLivePrices = async () => {
+          const network = networkSelect.value;
+          const data = NETWORK_DATA[network];
+          const loanAsset = loanAssetSelect.value;
+          livePricesContainer.innerHTML = "";
+
+          for (const exchange of data.exchanges) {
+            for (const asset of Object.keys(data.assets)) {
+              const apiSymbol = getApiSymbol(asset, loanAsset);
+              const price = await fetchRealPrice(apiSymbol);
+              if (price) {
+                const newPrice = price * (1 + (Math.random() - 0.5) * 0.005); // Simulate spread
+                livePrices[`${exchange.name}-${asset}-${loanAsset}`] = newPrice;
+
+                const priceElement = document.createElement("div");
+                priceElement.className =
+                  "price-list-item flex justify-between items-center p-1 rounded-md text-xs";
+                priceElement.innerHTML = `<span class="font-bold text-gray-300">${
+                  exchange.name
+                }/${asset}</span><span class="font-mono price-neutral">${newPrice.toLocaleString(
+                  "en-US",
+                  { style: "currency", currency: "USD" }
+                )}</span>`;
+                livePricesContainer.appendChild(priceElement);
+              }
+            }
+          }
+          if (livePricesContainer.innerHTML === "") {
+            livePricesContainer.innerHTML = `<p class="text-gray-400 p-2">Cargando precios...</p>`;
+          }
+        };
+
+        const startPriceUpdates = async () => {
+          clearInterval(priceUpdateInterval);
+          livePrices = {};
+          await updateLivePrices();
+          priceUpdateInterval = setInterval(updateLivePrices, 5000);
+        };
+
+        swapCountSlider.addEventListener("input", (e) => {
+          const count = parseInt(e.target.value);
+          swapCountLabel.textContent = count;
+          generateWorkflowZones(count);
+        });
+
+        networkSelect.addEventListener("change", (e) =>
+          updateUIForNetwork(e.target.value)
+        );
+        loanAssetSelect.addEventListener("change", startPriceUpdates);
+
+        updateUIForNetwork("ethereum");
+
+        const logMessage = (msg, type = "info") => {
+          const p = document.createElement("p");
+          p.textContent = `> ${msg}`;
+          p.className = `log-entry ${type}`;
+          output.appendChild(p);
+          output.scrollTop = output.scrollHeight;
+        };
+
+        const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+        simulateBtn.addEventListener("click", async () => {
+          output.innerHTML = "";
+          finalProfitDisplay.innerHTML = "";
+          finalProfitDisplay.className =
+            "text-4xl text-center font-orbitron mt-6";
+
+          const loanProvider = document.querySelector(
+            "#loan-step .dropped-cube"
+          )?.dataset.name;
+          const swapZones = Array.from(
+            document.querySelectorAll('[id^="swap-step-"]')
+          );
+
+          if (
+            !loanProvider ||
+            swapZones.some((zone) => !zone.querySelector(".dropped-cube"))
+          ) {
+            logMessage("Faltan bloques en tu combo para simular.", "error");
+            return;
+          }
+
+          simulateBtn.disabled = true;
+          simulateBtn.textContent = "SIMULANDO...";
+
+          const initialLoanAmount = parseFloat(
+            document.getElementById("loanAmount").value
+          );
+          const initialLoanAsset = loanAssetSelect.value;
+          const network = networkSelect.value;
+          const loanFeePercentage = 0.0009;
+
+          logMessage(
+            `Iniciando simulación en ${network.toUpperCase()}...`,
+            "title"
+          );
+          await sleep(500);
+          logMessage(
+            `Paso 1: Pidiendo Flash Loan de ${initialLoanAmount.toLocaleString()} ${initialLoanAsset} de ${loanProvider}.`
+          );
+
+          let balances = { [initialLoanAsset]: initialLoanAmount };
+
+          for (let i = 0; i < swapZones.length; i++) {
+            const zone = swapZones[i];
+            const exchange = zone.querySelector(".dropped-cube").dataset.name;
+            const fromToken = zone.querySelector(".from-token").value;
+            const toToken = zone.querySelector(".to-token").value;
+            const fromAmount = balances[fromToken];
+
+            if (!fromAmount) {
+              logMessage(
+                `Error: No tenés balance de ${fromToken} para el paso ${
+                  i + 2
+                }.`,
+                "error"
+              );
+              simulateBtn.disabled = false;
+              simulateBtn.textContent = "Simular Transacción";
+              return;
+            }
+
+            // Determine which price to look for
+            let price = null;
+            if (livePrices[`${exchange}-${toToken}-${fromToken}`]) {
+              price = livePrices[`${exchange}-${toToken}-${fromToken}`];
+            } else if (livePrices[`${exchange}-${fromToken}-${toToken}`]) {
+              price = 1 / livePrices[`${exchange}-${fromToken}-${toToken}`];
+            }
+
+            if (price === null) {
+              logMessage(
+                `Error: No se encontró precio para ${fromToken}/${toToken} en ${exchange}.`,
+                "error"
+              );
+              simulateBtn.disabled = false;
+              simulateBtn.textContent = "Simular Transacción";
+              return;
+            }
+
+            const toAmount = fromAmount * price;
+            delete balances[fromToken];
+            balances[toToken] = (balances[toToken] || 0) + toAmount;
+
+            await sleep(1000);
+            logMessage(
+              `Paso ${i + 2}: Swap de ${fromAmount.toLocaleString(undefined, {
+                maximumFractionDigits: 4,
+              })} ${fromToken} a ${toToken} en ${exchange}.`
+            );
+            logMessage(
+              `Recibido: ${toAmount.toLocaleString(undefined, {
+                maximumFractionDigits: 4,
+              })} ${toToken}.`
+            );
+          }
+
+          const finalAmount = balances[initialLoanAsset];
+          if (finalAmount === undefined) {
+            logMessage(
+              `Error: La simulación no terminó con la moneda del préstamo (${initialLoanAsset}).`,
+              "error"
+            );
+            simulateBtn.disabled = false;
+            simulateBtn.textContent = "Simular Transacción";
+            return;
+          }
+
+          const loanFee = initialLoanAmount * loanFeePercentage;
+          const profit = finalAmount - initialLoanAmount - loanFee;
+
+          await sleep(1000);
+          logMessage(
+            `Paso final: Devolviendo préstamo de ${initialLoanAmount.toLocaleString()} ${initialLoanAsset} + fee de ${loanFee.toLocaleString()} ${initialLoanAsset}.`
+          );
+
+          logMessage("--- TRANSACCIÓN COMPLETADA ---", "title");
+          await sleep(500);
+
+          if (profit > 0) {
+            logMessage(
+              `¡ÉXITO! Ganancia neta: ${profit.toLocaleString(undefined, {
+                maximumFractionDigits: 2,
+              })} ${initialLoanAsset}.`,
+              "success"
+            );
+            finalProfitDisplay.textContent = `+${profit.toLocaleString(
+              "es-AR",
+              { style: "currency", currency: "USD" }
+            )}`;
+            finalProfitDisplay.classList.add("positive");
+          } else {
+            logMessage(
+              `FALLO. Pérdida: ${profit.toLocaleString(undefined, {
+                maximumFractionDigits: 2,
+              })} ${initialLoanAsset}. La transacción se revertiría.`,
+              "error"
+            );
+            finalProfitDisplay.textContent = `${profit.toLocaleString("es-AR", {
+              style: "currency",
+              currency: "USD",
+            })}`;
+            finalProfitDisplay.classList.add("negative");
+          }
+
+          simulateBtn.disabled = false;
+          simulateBtn.textContent = "Simular Transacción";
+        });
+      });
+    </script>
+  </body>
+</html>
