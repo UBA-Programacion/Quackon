@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulador de Flash Loan y Arbitraje Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@400;500;700&display=swap");
+
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #0d1117;
+        color: #e2e8f0;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 100vh;
+        padding: 2rem;
+        flex-direction: column;
+      }
+      .nav-bar {
+        background-color: #161b22;
+        box-shadow: 0 4px 15px rgba(0, 255, 255, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+      .nav-link {
+        font-family: "Orbitron", sans-serif;
+        letter-spacing: 0.05em;
+        color: #94a3b8;
+        transition: color 0.3s;
+      }
+      .nav-link:hover {
+        color: #00bcd4;
+      }
+      .container {
+        width: 100%;
+        max-width: 1400px;
+        background-color: #161b22;
+        border-radius: 1.5rem;
+        padding: 3rem;
+        box-shadow: 0 10px 40px rgba(0, 255, 255, 0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
+      .header h1 {
+        font-family: "Orbitron", sans-serif;
+        letter-spacing: 0.1em;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+      }
+      .grid-container {
+        display: grid;
+        gap: 2rem;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      }
+      .input-group {
+        display: flex;
+        flex-direction: column;
+      }
+      .label {
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        color: #94a3b8;
+      }
+      .input,
+      .select {
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        border: 1px solid #30363d;
+        background-color: #21262d;
+        color: #e2e8f0;
+        outline: none;
+        transition: border-color 0.3s;
+      }
+      .input:focus,
+      .select:focus {
+        border-color: #00bcd4;
+      }
+      .button {
+        background-image: linear-gradient(45deg, #00bcd4, #008ba3);
+        color: #ffffff;
+        padding: 1rem;
+        border-radius: 0.75rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        cursor: pointer;
+        transition: transform 0.1s, box-shadow 0.3s;
+        box-shadow: 0 5px 15px rgba(0, 188, 212, 0.3);
+      }
+      .button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 188, 212, 0.5);
+      }
+      .simulation-output {
+        background-color: #21262d;
+        border-radius: 0.75rem;
+        padding: 2rem;
+        margin-top: 3rem;
+        min-height: 400px;
+        border: 1px solid #30363d;
+        font-family: "Orbitron", sans-serif;
+      }
+      .log-entry {
+        border-bottom: 1px solid #30363d;
+        padding: 0.75rem 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .log-entry:last-child {
+        border-bottom: none;
+      }
+      .success {
+        color: #38a169;
+      }
+      .error {
+        color: #e53e3e;
+      }
+      .info {
+        color: #94a3b8;
+      }
+      .price {
+        color: #00bcd4;
+      }
+
+      .draggable-item {
+        background-color: #2c3a5e;
+        color: #ffffff;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        cursor: grab;
+        user-select: none;
+        text-align: center;
+        margin-bottom: 0.5rem;
+        border: 1px solid transparent;
+        transition: all 0.2s;
+      }
+      .draggable-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 188, 212, 0.2);
+        border-color: #00bcd4;
+      }
+      .drop-zone {
+        border: 2px dashed #4a5568;
+        border-radius: 0.75rem;
+        min-height: 100px;
+        padding: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        transition: border-color 0.2s;
+      }
+      .drop-zone.active {
+        border-color: #00bcd4;
+        background-color: #21262d;
+      }
+      .route-exchange {
+        background-color: #00bcd4;
+        color: #161b22;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-family: "Inter", sans-serif;
+        box-shadow: 0 4px 10px rgba(0, 188, 212, 0.3);
+      }
+      .remove-icon {
+        cursor: pointer;
+        color: #161b22;
+        font-weight: bold;
+      }
+      .pools {
+        display: flex;
+        gap: 2rem;
+        flex-direction: column;
+      }
+      @media (min-width: 768px) {
+        .pools {
+          flex-direction: row;
+        }
+      }
+      .real-time-prices {
+        background-color: #21262d;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        border: 1px solid #30363d;
+      }
+      .price-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #30363d;
+      }
+      .price-item:last-child {
+        border-bottom: none;
+      }
+      .price-item .exchange-name {
+        font-family: "Orbitron", sans-serif;
+        color: #94a3b8;
+      }
+      .price-item .price-value {
+        font-family: "Orbitron", sans-serif;
+        font-weight: bold;
+        color: #00bcd4;
+      }
+      .profit-display {
+        font-family: "Orbitron", sans-serif;
+        font-size: 2.5rem;
+        font-weight: bold;
+        text-align: center;
+        margin-top: 2rem;
+      }
+      .positive {
+        color: #38a169;
+        text-shadow: 0 0 10px #38a169;
+      }
+      .negative {
+        color: #e53e3e;
+        text-shadow: 0 0 10px #e53e3e;
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 100;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.8);
+        justify-content: center;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Barra de Navegación -->
+    <nav class="nav-bar w-full">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center">
+            <a
+              href="#"
+              class="flex-shrink-0 text-white font-bold text-xl nav-link"
+            >
+              QUANTUN ARITRAGE
+            </a>
+          </div>
+          <div class="hidden md:block">
+            <div class="ml-10 flex items-baseline space-x-4">
+              <a
+                href="index.html"
+                class="nav-link px-3 py-2 rounded-md font-medium"
+                >Inicio</a
+              >
+              <a
+                href="aestrella.html"
+                class="nav-link px-3 py-2 rounded-md font-medium"
+                >A*</a
+              >
+              <a
+                href="markov.html"
+                class="nav-link px-3 py-2 rounded-md font-medium"
+                >Markov</a
+              >
+              <a
+                href="lagrange.html"
+                class="nav-link px-3 py-2 rounded-md font-medium"
+                >Lagrange</a
+              >
+              <a
+                href="index.html#contact"
+                class="nav-link px-3 py-2 rounded-md font-medium"
+                >Contacto</a
+              >
+            </div>
+          </div>
+          <div class="-mr-2 flex md:hidden">
+            <button
+              type="button"
+              class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+              aria-controls="mobile-menu"
+              aria-expanded="false"
+              id="mobile-menu-btn"
+            >
+              <svg
+                class="block h-6 w-6"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="md:hidden hidden" id="mobile-menu">
+        <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+          <a
+            href="index.html"
+            class="nav-link block px-3 py-2 rounded-md font-medium"
+            >Inicio</a
+          >
+          <a
+            href="aestrella.html"
+            class="nav-link block px-3 py-2 rounded-md font-medium"
+            >A*</a
+          >
+          <a
+            href="markov.html"
+            class="nav-link block px-3 py-2 rounded-md font-medium"
+            >MarkoV</a
+          >
+          <a
+            href="lagrange.html"
+            class="nav-link block px-3 py-2 rounded-md font-medium"
+            >Lagrange</a
+          >
+          <a
+            href="index.html#contact"
+            class="nav-link block px-3 py-2 rounded-md font-medium"
+            >Contacto</a
+          >
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <header class="header">
+        <h1 class="text-4xl md:text-5xl font-bold">A* (Arbitrage Star) Pro</h1>
+        <p class="mt-2 text-gray-400">
+          Armá tu arbitraje y con precios en tiempo real.
+        </p>
+      </header>
+
+      <!-- Controles y opciones -->
+      <div class="grid-container">
+        <div class="input-group">
+          <label for="network" class="label">Seleccionar Red:</label>
+          <select id="network" class="select">
+            <option value="ethereum">Ethereum</option>
+            <option value="bnb">BNB Chain</option>
+            <option value="polygon">Polygon</option>
+            <option value="solana">Solana</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="baseCoin" class="label">Moneda Base (Estable):</label>
+          <select id="baseCoin" class="select">
+            <option value="USDT">USDT</option>
+            <option value="USDC">USDC</option>
+            <option value="DAI">DAI</option>
+            <option value="BUSD">BUSD</option>
+            <option value="TUSD">TUSD</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="targetCoin" class="label">Moneda a Arbitrar:</label>
+          <select id="targetCoin" class="select">
+            <option value="ETH">ETH</option>
+            <option value="BTC">BTC</option>
+            <option value="SOL">SOL</option>
+            <option value="ADA">ADA</option>
+            <option value="XRP">XRP</option>
+            <option value="LTC">LTC</option>
+            <option value="BCH">BCH</option>
+            <option value="AVAX">AVAX</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="minProfit" class="label">Ganancia Mínima (%)</label>
+          <input
+            type="number"
+            id="minProfit"
+            class="input"
+            value="0.5"
+            min="0.1"
+            step="0.1"
+          />
+        </div>
+        <div class="input-group">
+          <label for="flashLoanAmount" class="label"
+            >Cantidad del Flash Loan ($)</label
+          >
+          <input
+            type="number"
+            id="flashLoanAmount"
+            class="input"
+            value="100000"
+            min="10000"
+            step="1000"
+          />
+        </div>
+      </div>
+
+      <!-- Precios en tiempo real -->
+      <div class="real-time-prices w-full mt-8">
+        <h3 class="text-xl font-bold mb-4">Precios en Vivo (Simulados)</h3>
+        <div id="live-prices-container"></div>
+      </div>
+
+      <!-- Pools de proveedores -->
+      <div class="pools mt-8 flex-col md:flex-row">
+        <div class="w-full">
+          <h3 class="text-xl font-bold mb-4">Proveedores de Flash Loan</h3>
+          <div id="loan-pool" class="flex flex-wrap gap-2"></div>
+        </div>
+        <div class="w-full">
+          <h3 class="text-xl font-bold mb-4">Exchanges Disponibles</h3>
+          <div id="exchange-pool" class="flex flex-wrap gap-2"></div>
+        </div>
+      </div>
+
+      <!-- Camino de Arbitraje -->
+      <div class="mt-8">
+        <h3 class="text-xl font-bold mb-4">Camino del Arbitraje</h3>
+        <div class="mb-4">
+          <h4 class="text-lg font-bold mb-2">1. Pedir Flash Loan</h4>
+          <div id="loan-zone" class="drop-zone">
+            <p class="text-gray-500">
+              Arrastrá un proveedor de Flash Loan aquí.
+            </p>
+          </div>
+        </div>
+        <div class="mb-4">
+          <h4 class="text-lg font-bold mb-2">2. Primer Swap</h4>
+          <div id="swap1-zone" class="drop-zone">
+            <p class="text-gray-500">
+              Arrastrá un exchange para el primer swap.
+            </p>
+          </div>
+        </div>
+        <div class="mb-4">
+          <h4 class="text-lg font-bold mb-2">3. Segundo Swap</h4>
+          <div id="swap2-zone" class="drop-zone">
+            <p class="text-gray-500">
+              Arrastrá un exchange para el segundo swap.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8">
+        <button id="startButton" class="button w-full">
+          Iniciar Simulación
+        </button>
+      </div>
+
+      <div class="simulation-output" id="output">
+        <p class="text-center text-gray-500">
+          Los resultados de la simulación aparecerán acá.
+        </p>
+      </div>
+
+      <div
+        class="profit-display w-full text-center hidden"
+        id="final-profit"
+      ></div>
+    </div>
+
+    <!-- Pie de Página -->
+    <footer class="bg-gray-900 text-gray-400 py-8 mt-12 w-full">
+      <div
+        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center"
+      >
+        <div class="text-center md:text-left mb-4 md:mb-0">
+          <p>&copy; 4052 Flash Loans Corp. Todos los derechos reservados.</p>
+        </div>
+        <div class="flex space-x-6">
+          <a
+            href="#"
+            class="text-gray-400 hover:text-white transition-colors duration-300"
+          >
+            <svg
+              class="h-6 w-6"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.007-.533A8.349 8.349 0 0022 5.92a8.194 8.194 0 01-2.357.646 4.113 4.113 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.108 4.108 0 00-6.983 3.743 11.636 11.636 0 01-8.457-4.287 4.108 4.108 0 001.275 5.488 4.086 4.086 0 01-1.858-.513c-.045 1.901 1.317 3.65 3.29 4.053-.385.085-.79.117-1.209.117-.295 0-.58-.024-.855-.083a4.114 4.114 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.844"
+              />
+            </svg>
+          </a>
+          <a
+            href="#"
+            class="text-gray-400 hover:text-white transition-colors duration-300"
+          >
+            <svg
+              class="h-6 w-6"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.505 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.987A10 10 0 0022 12z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </a>
+          <a
+            href="#"
+            class="text-gray-400 hover:text-white transition-colors duration-300"
+          >
+            <svg
+              class="h-6 w-6"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.866 8.165 6.84 9.49l-1.427-4.42c-.08-.25-.09-.52.02-.75a1 1 0 011.05-.59c.28.05.57.08.86.08a7 7 0 005.15-2.02l.66-.66a1 1 0 011.41 0l.96.96a1 1 0 010 1.41l-1.41 1.41a1 1 0 01-1.41 0l-2.02-2.02a1 1 0 01-.02-1.42zM12 20a8 8 0 100-16 8 8 0 000 16z"
+              />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      const NETWORK_DATA = {
+        ethereum: {
+          loanProviders: ["Aave", "Curve", "Uniswap V3", "dYdX"],
+          exchanges: ["Uniswap", "Sushiswap", "Curve", "Coinbase", "Binance"],
+        },
+        bnb: {
+          loanProviders: ["PancakeSwap", "Venus", "Biswap"],
+          exchanges: ["PancakeSwap", "Biswap", "Binance", "BabySwap"],
+        },
+        polygon: {
+          loanProviders: ["Aave", "QuickSwap", "Uniswap"],
+          exchanges: ["QuickSwap", "Uniswap", "Sushiswap", "Kraken"],
+        },
+        solana: {
+          loanProviders: ["Solend", "Raydium"],
+          exchanges: ["Raydium", "Orca", "Jupiter", "Serum"],
+        },
+      };
+
+      const START_BUTTON = document.getElementById("startButton");
+      const NETWORK_SELECT = document.getElementById("network");
+      const LOAN_POOL = document.getElementById("loan-pool");
+      const EXCHANGE_POOL = document.getElementById("exchange-pool");
+      const LOAN_ZONE = document.getElementById("loan-zone");
+      const SWAP1_ZONE = document.getElementById("swap1-zone");
+      const SWAP2_ZONE = document.getElementById("swap2-zone");
+      const OUTPUT_DIV = document.getElementById("output");
+      const LIVE_PRICES_CONTAINER = document.getElementById(
+        "live-prices-container"
+      );
+      const FINAL_PROFIT_DISPLAY = document.getElementById("final-profit");
+      const mobileMenuBtn = document.getElementById("mobile-menu-btn");
+      const mobileMenu = document.getElementById("mobile-menu");
+
+      // Lógica de la barra de navegación para móvil
+      mobileMenuBtn.addEventListener("click", () => {
+        mobileMenu.classList.toggle("hidden");
+      });
+
+      const DRAG_ZONES = [LOAN_ZONE, SWAP1_ZONE, SWAP2_ZONE];
+
+      let priceUpdateInterval;
+
+      function createDraggableItem(name, type, parent) {
+        const item = document.createElement("div");
+        item.className = "draggable-item";
+        item.textContent = name;
+        item.dataset.name = name;
+        item.dataset.type = type;
+        item.draggable = true;
+        item.addEventListener("dragstart", (e) => {
+          e.dataTransfer.setData(
+            "text/plain",
+            JSON.stringify({
+              name: e.target.dataset.name,
+              type: e.target.dataset.type,
+            })
+          );
+        });
+        parent.appendChild(item);
+      }
+
+      function updatePools() {
+        const network = NETWORK_SELECT.value;
+        const data = NETWORK_DATA[network];
+
+        LOAN_POOL.innerHTML = "";
+        EXCHANGE_POOL.innerHTML = "";
+
+        data.loanProviders.forEach((name) =>
+          createDraggableItem(name, "Loan", LOAN_POOL)
+        );
+        data.exchanges.forEach((name) =>
+          createDraggableItem(name, "Exchange", EXCHANGE_POOL)
+        );
+      }
+
+      function dragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+        this.classList.add("active");
+      }
+
+      function dragLeave(e) {
+        this.classList.remove("active");
+      }
+
+      function handleDrop(e) {
+        e.preventDefault();
+        this.classList.remove("active");
+        const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+        this.innerHTML = "";
+        const item = document.createElement("div");
+        item.className = "route-exchange";
+        item.textContent = data.name;
+        item.dataset.name = data.name;
+        item.dataset.type = data.type;
+        this.appendChild(item);
+      }
+
+      DRAG_ZONES.forEach((zone) => {
+        zone.addEventListener("dragover", dragOver);
+        zone.addEventListener("dragleave", dragLeave);
+        zone.addEventListener("drop", handleDrop);
+      });
+
+      function getPrice(exchangeName, basePrice, volatility) {
+        return parseFloat(
+          (basePrice + (Math.random() * volatility - volatility / 2)).toFixed(2)
+        );
+      }
+
+      function runSimulation() {
+        const loanProviderEl = LOAN_ZONE.querySelector(".route-exchange");
+        const swap1El = SWAP1_ZONE.querySelector(".route-exchange");
+        const swap2El = SWAP2_ZONE.querySelector(".route-exchange");
+
+        if (!loanProviderEl || !swap1El || !swap2El) {
+          logMessage(
+            "Por favor, arrastrá un proveedor de flash loan y los dos exchanges.",
+            "error"
+          );
+          return;
+        }
+
+        clearInterval(priceUpdateInterval);
+
+        const flashLoanAmount = parseFloat(
+          document.getElementById("flashLoanAmount").value
+        );
+        const baseCoin = document.getElementById("baseCoin").value;
+        const targetCoin = document.getElementById("targetCoin").value;
+        const minProfit = parseFloat(
+          document.getElementById("minProfit").value
+        );
+
+        OUTPUT_DIV.innerHTML = "";
+        START_BUTTON.disabled = true;
+        FINAL_PROFIT_DISPLAY.classList.add("hidden");
+
+        const flashLoanProvider = loanProviderEl.dataset.name;
+        const exchange1Name = swap1El.dataset.name;
+        const exchange2Name = swap2El.dataset.name;
+
+        const volatility = 50;
+        const basePrice = 1000;
+
+        logMessage(`--- Paso 1: Pedir Flash Loan ---`, "info");
+        logMessage(
+          `Pidiendo un préstamo de ${flashLoanAmount} ${baseCoin} a ${flashLoanProvider}.`,
+          "info"
+        );
+        const loanFee = flashLoanAmount * 0.0009;
+        logMessage(
+          `Costo del préstamo (simulado): ${loanFee.toFixed(2)} ${baseCoin}`,
+          "info"
+        );
+
+        let currentAmount = flashLoanAmount;
+
+        setTimeout(() => {
+          logMessage(`--- Paso 2: Primer Swap ---`, "info");
+          const price1 = getPrice(exchange1Name, basePrice, volatility);
+          const amountAfterSwap1 = currentAmount / price1;
+          logMessage(
+            `Comprando ${targetCoin} en ${exchange1Name} a $${price1}.`,
+            "info"
+          );
+          logMessage(
+            `Cantidad de ${targetCoin} obtenida: ${amountAfterSwap1.toFixed(
+              6
+            )}`,
+            "info"
+          );
+
+          setTimeout(() => {
+            logMessage(`--- Paso 3: Segundo Swap ---`, "info");
+            const price2 = getPrice(exchange2Name, basePrice, volatility);
+            const amountAfterSwap2 = amountAfterSwap1 * price2;
+            logMessage(
+              `Vendiendo ${targetCoin} en ${exchange2Name} a $${price2}.`,
+              "info"
+            );
+            logMessage(
+              `Cantidad de ${baseCoin} obtenida: ${amountAfterSwap2.toFixed(
+                2
+              )}`,
+              "info"
+            );
+
+            setTimeout(() => {
+              logMessage(`--- Paso 4: Devolver Préstamo ---`, "info");
+              const totalRepay = flashLoanAmount + loanFee;
+              const finalProfit = amountAfterSwap2 - totalRepay;
+              const profitPercentage = (finalProfit / flashLoanAmount) * 100;
+
+              logMessage(
+                `Cantidad final: ${amountAfterSwap2.toFixed(2)} ${baseCoin}`,
+                "info"
+              );
+              logMessage(
+                `Monto a devolver: ${totalRepay.toFixed(2)} ${baseCoin}`,
+                "info"
+              );
+
+              logMessage(`--- Resultado Final ---`, "info");
+              if (finalProfit > 0 && profitPercentage > minProfit) {
+                logMessage(
+                  `¡Ganancia! 🤑 Total: ${finalProfit.toFixed(
+                    2
+                  )} ${baseCoin} (${profitPercentage.toFixed(2)}%)`,
+                  "success"
+                );
+                FINAL_PROFIT_DISPLAY.textContent = `Ganancia: +$${finalProfit.toFixed(
+                  2
+                )}`;
+                FINAL_PROFIT_DISPLAY.classList.add("positive");
+              } else {
+                logMessage(
+                  `Pérdida 😭 Total: ${finalProfit.toFixed(
+                    2
+                  )} ${baseCoin} (${profitPercentage.toFixed(2)}%)`,
+                  "error"
+                );
+                FINAL_PROFIT_DISPLAY.textContent = `Pérdida: $${finalProfit.toFixed(
+                  2
+                )}`;
+                FINAL_PROFIT_DISPLAY.classList.add("negative");
+              }
+              FINAL_PROFIT_DISPLAY.classList.remove("hidden");
+
+              START_BUTTON.disabled = false;
+              startPriceUpdate();
+            }, 1000);
+          }, 1000);
+        }, 1000);
+      }
+
+      function logMessage(message, type) {
+        const p = document.createElement("p");
+        p.textContent = message;
+        p.classList.add("log-entry");
+        p.classList.add(type);
+        OUTPUT_DIV.appendChild(p);
+        OUTPUT_DIV.scrollTop = OUTPUT_DIV.scrollHeight;
+      }
+
+      function updateLivePrices() {
+        const network = NETWORK_SELECT.value;
+        const data = NETWORK_DATA[network];
+        const targetCoin = document.getElementById("targetCoin").value;
+        const livePrices = {};
+
+        data.exchanges.forEach((name) => {
+          livePrices[name] = getPrice(name, 1000, 50);
+        });
+
+        LIVE_PRICES_CONTAINER.innerHTML = "";
+        for (const exchange in livePrices) {
+          const item = document.createElement("div");
+          item.className = "price-item";
+          item.innerHTML = `<span class="exchange-name">${exchange}</span><span class="price-value">$${livePrices[exchange]} ${targetCoin}</span>`;
+          LIVE_PRICES_CONTAINER.appendChild(item);
+        }
+      }
+
+      function startPriceUpdate() {
+        updateLivePrices();
+        priceUpdateInterval = setInterval(updateLivePrices, 2000);
+      }
+
+      NETWORK_SELECT.addEventListener("change", () => {
+        updatePools();
+        startPriceUpdate();
+      });
+
+      updatePools();
+      startPriceUpdate();
+      START_BUTTON.addEventListener("click", runSimulation);
+    </script>
+  </body>
+</html>
