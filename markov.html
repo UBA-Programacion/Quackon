@@ -391,7 +391,7 @@
             class="bg-[#161b22] p-6 rounded-xl border border-[#30363d] min-h-[200px]"
           >
             <h2 class="text-2xl font-bold font-orbitron text-green-400 mb-4">
-              Log de Simulación
+              Log de Ejecución
             </h2>
             <div id="output" class="space-y-2 font-mono text-sm">
               <p class="text-gray-500">
@@ -705,7 +705,7 @@
           }
 
           simulateBtn.disabled = true;
-          simulateBtn.textContent = "SIMULANDO...";
+          simulateBtn.textContent = "EJECUTANDO...";
 
           const amount = parseFloat(
             document.getElementById("loanAmount").value
@@ -715,7 +715,7 @@
           const loanFee = amount * 0.0009;
 
           logMessage(
-            `Iniciando simulación en ${network.toUpperCase()} para ${selectedAsset}...`,
+            `Iniciando ejecución en ${network.toUpperCase()} para ${selectedAsset}...`,
             "title"
           );
           await sleep(500);
@@ -795,11 +795,12 @@
           }
 
           simulateBtn.disabled = false;
-          simulateBtn.textContent = "Simular Transacción";
+          simulateBtn.textContent = "Ejecutar Transacción";
         });
       });
     </script>
   </body>
 </html>
+
 
 
